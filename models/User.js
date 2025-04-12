@@ -2,70 +2,68 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
-// Profile subdocument schema for each user (max 5 profiles)
+// Profile subdocument schema (each profile now gets its own _id)
 const ProfileSchema = new mongoose.Schema(
   {
-    profileName: {
-      type: String,
-      required: true,
+    profileName: { 
+      type: String, 
+      required: true 
     },
-    avatar: {
-      type: String,
-      required: true,
-    },
+    avatar: { 
+      type: String, 
+      required: true 
+    }
   },
-  { _id: false, timestamps: true }
+  { timestamps: true }  // automatically adds createdAt and updatedAt
 );
 
-// Custom validator to ensure no more than 5 profiles are added
+// Validator to ensure a user has no more than 5 profiles
 function arrayLimit(val) {
   return val.length <= 5;
 }
 
 const UserSchema = new mongoose.Schema(
   {
-    name: {
-      type: String,
-      required: true,
+    name: { 
+      type: String, 
+      required: true 
     },
-    email: {
-      type: String,
-      required: true,
-      unique: true,
-      lowercase: true,
+    email: { 
+      type: String, 
+      required: true, 
+      unique: true, 
+      lowercase: true 
     },
-    phone: {
-      type: String,
-      unique: true,
+    phone: { 
+      type: String, 
+      unique: true 
     },
-    password: {
-      type: String,
-      required: true,
+    password: { 
+      type: String, 
+      required: true 
     },
-    role: {
-      type: String,
-      enum: ['admin', 'user'],
-      default: 'user',
+    role: { 
+      type: String, 
+      enum: ['admin', 'user'], 
+      default: 'user' 
     },
     profiles: {
       type: [ProfileSchema],
-      validate: [arrayLimit, '{PATH} exceeds the limit of 5'],
-    },
+      validate: [arrayLimit, '{PATH} exceeds the limit of 5']
+    }
   },
   { timestamps: true }
 );
 
-// Pre-save middleware to hash the password before saving
+// Pre-save middleware to hash password if modified
 UserSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
 
-  // Validate: at least 8 characters, at least one letter and one number
+  // Validate password: at least 8 characters, one letter and one number.
   const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
   if (!passwordRegex.test(this.password)) {
     return next(
-      new Error(
-        'Password must be at least 8 characters long and contain at least one letter and one number.'
-      )
+      new Error('Password must be at least 8 characters long and contain at least one letter and one number.')
     );
   }
 
@@ -78,6 +76,7 @@ UserSchema.pre('save', async function (next) {
   }
 });
 
+// Instance method to compare a candidate password with the hashed password
 UserSchema.methods.comparePassword = async function (candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };

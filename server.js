@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors'); // Import the CORS middleware
 const connectDB = require('./db_connection');
 const userRoutes = require('./routes/userRoutes');
+const profileRoutes = require('./routes/profileRoutes');
 require('dotenv').config();
 
 const app = express();
@@ -27,7 +28,7 @@ app.use(express.json());
 
 // Define your routes
 app.use('/api/users', userRoutes);
-
+app.use('/api/users', profileRoutes);  
 // Global error-handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
