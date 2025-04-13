@@ -3,7 +3,7 @@ const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 
 
-const assetsBaseUrl = process.env.FRONTEND_ASSETS_BASE_URL || 'http://localhost:5173';
+const assetsBaseUrl = process.env.FRONTEND_ASSETS_BASE_URL;
 
 const avatars = [
   `${assetsBaseUrl}/assets/avatar1.png`,

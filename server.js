@@ -11,7 +11,7 @@ const app = express();
 // CORS configuration options
 const corsOptions = {
   // In development, allow requests from your local frontend:
-  origin: ["http://localhost:5173", "https://your-app.netlify.app"],
+  origin: ["http://localhost:3000", "https://your-app.netlify.app"],
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
   credentials: true, 
   optionsSuccessStatus: 200 
