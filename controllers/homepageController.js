@@ -1,49 +1,87 @@
-// controllers/homepageController.js
 const axios = require('axios');
-const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
-const TMDB_API_KEY = process.env.TMDB_API_KEY;
+const BASE_URL = 'https://api.themoviedb.org/3';
+const API_KEY = process.env.TMDB_API_KEY;
 
-const getCover = async (req, res) => {
+const fetchTMDB = async (endpoint) => {
+  const url = `${BASE_URL}${endpoint}${endpoint.includes('?') ? '&' : '?'}api_key=${API_KEY}`;
+  const response = await axios.get(url);
+  return response.data.results;
+};
+
+// Helper to limit and tag media type
+const prepareResults = (results, limit = null, mediaType = 'movie') => {
+  const tagged = results.map(item => ({ ...item, media_type: mediaType }));
+  return limit ? tagged.slice(0, limit) : tagged;
+};
+
+exports.getCover = async (req, res) => {
   try {
-    const [moviesRes, tvRes] = await Promise.all([
-      axios.get(`${TMDB_BASE_URL}/discover/movie`, {
-        params: { sort_by: 'popularity.desc', api_key: TMDB_API_KEY }
-      }),
-      axios.get(`${TMDB_BASE_URL}/discover/tv`, {
-        params: { sort_by: 'popularity.desc', api_key: TMDB_API_KEY }
-      })
+    const [movies, tv] = await Promise.all([
+      fetchTMDB('/discover/movie?sort_by=popularity.desc'),
+      fetchTMDB('/discover/tv?sort_by=popularity.desc'),
     ]);
-
-    const movies = moviesRes.data.results.map(m => ({ ...m, media_type: 'movie' }));
-    const tvShows = tvRes.data.results.map(t => ({ ...t, media_type: 'tv' }));
-    const combined = [...movies.slice(0, 2), ...tvShows.slice(0, 2)];
+    const combined = [
+      ...prepareResults(movies, 2, 'movie'),
+      ...prepareResults(tv, 2, 'tv'),
+    ];
     const random = combined[Math.floor(Math.random() * combined.length)];
-
     res.json(random);
-  } catch (error) {
-    console.error('Error fetching cover:', error.message);
-    res.status(500).json({ message: 'Error fetching cover' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch cover' });
   }
 };
 
-const proxyTmdb = async (req, res) => {
-  try {
-    const { url } = req.query;
-    if (!url) return res.status(400).json({ message: 'Missing TMDB URL' });
-
-    const fullUrl = `${TMDB_BASE_URL}${url}`;
-    const response = await axios.get(fullUrl, {
-      params: { api_key: TMDB_API_KEY }
-    });
-
-    res.json(response.data);
-  } catch (error) {
-    console.error('TMDB proxy error:', error.message);
-    res.status(500).json({ message: 'Failed to fetch from TMDB' });
-  }
+exports.getMatched = async (req, res) => {
+  const data = await fetchTMDB('/discover/movie?sort_by=popularity.desc');
+  res.json(prepareResults(data, 10));
 };
 
-module.exports = {
-  getCover,
-  proxyTmdb
+exports.getNetflix = async (req, res) => {
+  const data = await fetchTMDB('/discover/tv?with_networks=213');
+  res.json(prepareResults(data, 10, 'tv'));
+};
+
+exports.getTop10 = async (req, res) => {
+  const data = await fetchTMDB('/movie/top_rated?region=US');
+  res.json(prepareResults(data, 10));
+};
+
+exports.getLove = async (req, res) => {
+  const data = await fetchTMDB('/discover/movie?sort_by=popularity.desc');
+  res.json(prepareResults(data));
+};
+
+exports.getAnimation = async (req, res) => {
+  const data = await fetchTMDB('/discover/movie?with_genres=16');
+  res.json(prepareResults(data));
+};
+
+exports.getInspiring = async (req, res) => {
+  const data = await fetchTMDB('/search/movie?query=inspiring');
+  res.json(prepareResults(data));
+};
+
+exports.getWatchlist = async (req, res) => {
+  const data = await fetchTMDB('/discover/movie?sort_by=popularity.desc');
+  res.json(prepareResults(data));
+};
+
+exports.getWeekend = async (req, res) => {
+  const data = await fetchTMDB('/discover/movie?with_runtime.lte=90');
+  res.json(prepareResults(data));
+};
+
+exports.getCritics = async (req, res) => {
+  const data = await fetchTMDB('/movie/top_rated');
+  res.json(prepareResults(data));
+};
+
+exports.getFresh = async (req, res) => {
+  const data = await fetchTMDB('/discover/movie?sort_by=vote_average.desc');
+  res.json(prepareResults(data));
+};
+
+exports.getAdultAnimation = async (req, res) => {
+  const data = await fetchTMDB('/discover/tv?with_genres=16&include_adult=true');
+  res.json(prepareResults(data, null, 'tv'));
 };
