@@ -1,20 +1,18 @@
 // server.js
 const express = require('express');
-const cors = require('cors'); // Import the CORS middleware
+const cors = require('cors');
 const connectDB = require('./db_connection');
 const userRoutes = require('./routes/userRoutes');
 const profileRoutes = require('./routes/profileRoutes');
+const homepageRoutes = require('./routes/homepageRoutes'); // NEW route for homepage endpoints
+
 require('dotenv').config();
 
 const app = express();
 
-// CORS configuration options
+// Define basic CORS options (adjust as needed)
 const corsOptions = {
-  // In development, allow requests from your local frontend:
-  origin: ["http://localhost:3000", "https://your-app.netlify.app"],
-  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
-  credentials: true, 
-  optionsSuccessStatus: 200 
+  origin: '*' // Allow all origins. In production, restrict this to your front-end domain.
 };
 
 // Enable CORS using the specified options
@@ -28,7 +26,9 @@ app.use(express.json());
 
 // Define your routes
 app.use('/api/users', userRoutes);
-app.use('/api/users', profileRoutes);  
+app.use('/api/users', profileRoutes);
+app.use('/api/homepage', homepageRoutes);  // NEW: All homepage-related API calls go here
+
 // Global error-handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
