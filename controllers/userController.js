@@ -3,12 +3,14 @@ const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 
 
-const assetsBaseUrl = process.env.FRONTEND_ASSETS_BASE_URL;
+const assetsBaseUrl = process.env.REACT_APP_FRONTEND_ASSETS_BASE_URL || '';
 
 const avatars = [
   `${assetsBaseUrl}/assets/avatar1.png`,
   `${assetsBaseUrl}/assets/avatar2.png`,
   `${assetsBaseUrl}/assets/avatar3.png`,
+  `${assetsBaseUrl}/assets/avatar4.png`,
+  `${assetsBaseUrl}/assets/avatar5.png`,
 ];
 
 const registerUser = async (req, res, next) => {
