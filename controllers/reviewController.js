@@ -1,5 +1,6 @@
 // controllers/reviewController.js
 const Review = require('../models/Review');
+const Log = require('../models/Log');
 
 const createReview = async (req, res, next) => {
   try {
@@ -13,6 +14,11 @@ const createReview = async (req, res, next) => {
       isPublic,
       rating,
     });
+    // Log the creation of the review
+    await Log.create({
+      message: `Review submitted for program ${title} (ID: ${movieId}) with rating ${rating}.`,
+      level: 'info',
+    });
     console.log('Review created:', review);
     res.status(201).json({ review });
   } catch (error) {
@@ -20,6 +26,5 @@ const createReview = async (req, res, next) => {
     next(error);
   }
 };
-
 
 module.exports = { createReview };

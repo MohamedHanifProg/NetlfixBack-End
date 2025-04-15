@@ -1,4 +1,6 @@
 // controllers/userController.js
+
+const Log = require('../models/Log');
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 
@@ -34,6 +36,10 @@ const registerUser = async (req, res, next) => {
     await user.save();
     
     // Return the newly registered user (omit password in production)
+    await Log.create({
+      message: `User Created: ${user.email} (Role: ${user.role}).`,
+      level: 'info',
+    });
     res.status(201).json({ user });
     
   } catch (error) {
@@ -62,6 +68,10 @@ const loginUser = async (req, res, next) => {
     );
     
     res.status(200).json({ token });
+    await Log.create({
+      message: `User login: ${user.email} (Role: ${user.role}).`,
+      level: 'info',
+    });
     
   } catch (error) {
     next(error);
