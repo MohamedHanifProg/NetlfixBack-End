@@ -16,7 +16,6 @@ const newPopularRoutes = require('./routes/newpopularRoutes');
 const browseRoutes = require('./routes/browseRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
 const detailsRoutes = require('./routes/detailRoutes');
-
 const app = express();
 
 // CORS options
@@ -41,7 +40,7 @@ app.use('/api/trending', newPopularRoutes);
 app.use('/api/browse', browseRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/details', detailsRoutes); 
-
+app.use('/api/reviews', reviewRoutes);
 
 // Global error handler
 app.use((err, req, res, next) => {

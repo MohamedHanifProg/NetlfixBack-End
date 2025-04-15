@@ -1,7 +1,10 @@
+// routes/reviewRoutes.js
 const express = require('express');
 const router = express.Router();
-const { postReview } = require('../controllers/reviewController');
+const { createReview } = require('../controllers/reviewController');
+const { protect } = require('../middlewares/authMiddleware');
 
-router.post('/', postReview);
+// Create a review (secured route)
+router.post('/', protect, createReview);
 
 module.exports = router;
