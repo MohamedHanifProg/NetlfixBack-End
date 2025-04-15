@@ -16,6 +16,7 @@ const newPopularRoutes = require('./routes/newpopularRoutes');
 const browseRoutes = require('./routes/browseRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
 const detailsRoutes = require('./routes/detailRoutes');
+const programRoutes = require('./routes/programRoutes');
 const app = express();
 
 // CORS options
@@ -32,7 +33,6 @@ connectDB();
 // Routes
 app.use('/api/users', userRoutes);
 app.use('/api/users', profileRoutes);
-
 app.use('/api/homepage', homepageRoutes);
 app.use('/api/movies', movieRoutes);
 app.use('/api/tvshows', tvshowsRoutes);
@@ -41,6 +41,7 @@ app.use('/api/browse', browseRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/details', detailsRoutes); 
 app.use('/api/reviews', reviewRoutes);
+app.use('/api/programs', programRoutes);
 
 // Global error handler
 app.use((err, req, res, next) => {
