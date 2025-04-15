@@ -17,6 +17,7 @@ const browseRoutes = require('./routes/browseRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
 const detailsRoutes = require('./routes/detailRoutes');
 const programRoutes = require('./routes/programRoutes');
+const logRoutes = require('./routes/logRoutes');
 const app = express();
 
 // CORS options
@@ -42,6 +43,7 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/details', detailsRoutes); 
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/programs', programRoutes);
+app.use('/api/logs', logRoutes);
 
 // Global error handler
 app.use((err, req, res, next) => {

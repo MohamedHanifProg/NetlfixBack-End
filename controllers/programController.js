@@ -1,6 +1,6 @@
 // controllers/programController.js
 const Program = require('../models/Program');
-
+const Log = require('../models/Log');
 const createProgram = async (req, res, next) => {
   try {
     const { externalId, title, mediaType, posterPath, backdropPath, releaseDate, overview, genres } = req.body;
@@ -14,6 +14,10 @@ const createProgram = async (req, res, next) => {
       overview,
       genres,
     });
+    await Log.create({
+        message: `Program created: ${title} (External ID: ${externalId})`,
+        level: 'info',
+      });
     res.status(201).json({ program });
   } catch (error) {
     next(error);
