@@ -85,3 +85,26 @@ exports.getAdultAnimation = async (req, res) => {
   const data = await fetchTMDB('/discover/tv?with_genres=16&include_adult=true');
   res.json(prepareResults(data, null, 'tv'));
 };
+// Proxy request to TMDB for full movie/TV show details
+exports.getProxyDetails = async (req, res) => {
+  const axios = require('axios');
+  const API_KEY = process.env.TMDB_API_KEY;
+  const BASE_URL = 'https://api.themoviedb.org/3';
+
+  const { url } = req.query;
+  if (!url) return res.status(400).json({ message: 'Missing URL param' });
+
+  try {
+    const response = await axios.get(`${BASE_URL}${url}`, {
+      params: {
+        api_key: API_KEY,
+        append_to_response: 'credits' // Optional: get cast/crew
+      }
+    });
+
+    res.json(response.data);
+  } catch (err) {
+    console.error('TMDB Proxy Error:', err.response?.data || err.message);
+    res.status(404).json({ message: 'Failed to fetch from TMDB', error: err.message });
+  }
+};

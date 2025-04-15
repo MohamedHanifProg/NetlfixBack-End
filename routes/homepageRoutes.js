@@ -14,5 +14,7 @@ router.get('/weekend', homepageController.getWeekend);
 router.get('/critics', homepageController.getCritics);
 router.get('/fresh', homepageController.getFresh);
 router.get('/adultAnimation', homepageController.getAdultAnimation);
+router.get('/proxy', homepageController.getProxyDetails);
+
 
 module.exports = router;
