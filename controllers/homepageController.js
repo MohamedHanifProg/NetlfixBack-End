@@ -1,6 +1,9 @@
 const axios = require('axios');
 const BASE_URL = 'https://api.themoviedb.org/3';
 const API_KEY = process.env.TMDB_API_KEY;
+const Review = require('../models/Review');
+const Program = require('../models/Program');
+const { recommendByDescription } = require('../utils/recommendByDescription');
 
 const fetchTMDB = async (endpoint) => {
   const url = `${BASE_URL}${endpoint}${endpoint.includes('?') ? '&' : '?'}api_key=${API_KEY}`;
@@ -35,8 +38,26 @@ exports.getCover = async (req, res) => {
 };
 
 exports.getMatched = async (req, res) => {
-  const data = await fetchTMDB('/discover/movie?sort_by=popularity.desc');
-  res.json(prepareResults(data, 10));
+  try {
+    const userId = req.user.id;
+
+    // Get user's reviews
+    const userReviews = await Review.find({ user: userId });
+
+    // Extract the review texts
+    const likedOverviews = userReviews.map(r => r.text);
+
+    // Get all programs from MongoDB (not from TMDB)
+    const allPrograms = await Program.find();
+
+    // Use AI to get top 10 matches
+    const recommendations = await recommendByDescription(likedOverviews, allPrograms);
+
+    res.status(200).json(recommendations);
+  } catch (err) {
+    console.error('AI Matching Error:', err);
+    res.status(500).json({ message: 'Failed to get recommendations' });
+  }
 };
 
 exports.getNetflix = async (req, res) => {

@@ -1,9 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const homepageController = require('../controllers/homepageController');
+const { protect } = require('../middlewares/authMiddleware');
+
 
 router.get('/cover', homepageController.getCover);
-router.get('/matched', homepageController.getMatched);
+router.get('/matched', protect, homepageController.getMatched);
 router.get('/netflix', homepageController.getNetflix);
 router.get('/top10', homepageController.getTop10);
 router.get('/love', homepageController.getLove);
