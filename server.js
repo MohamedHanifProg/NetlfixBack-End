@@ -20,7 +20,7 @@ const trendingRoutes  = require('./routes/newpopularRoutes');
 const browseRoutes    = require('./routes/browseRoutes');
 const reviewRoutes    = require('./routes/reviewRoutes');
 const detailsRoutes   = require('./routes/detailRoutes');
-
+const myListRoutes = require('./routes/myListRoutes');
 // ────────────── admin router (wraps the admin sub‑routers)
 const adminRoutes = require('./routes/adminRoutes');
 
@@ -43,6 +43,7 @@ app.use('/api/trending',  trendingRoutes);
 app.use('/api/browse',    browseRoutes);
 app.use('/api/reviews',   reviewRoutes);
 app.use('/api/details',   detailsRoutes);
+app.use('/api/mylist', myListRoutes);
 
 // ────────────── admin‑only endpoints
 // 401 → not logged‑in, 403 → not admin
