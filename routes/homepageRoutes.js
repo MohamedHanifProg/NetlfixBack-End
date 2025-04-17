@@ -4,10 +4,12 @@ const homepageController = require('../controllers/homepageController');
 const { protect } = require('../middlewares/authMiddleware');
 
 
+
 router.get('/cover', homepageController.getCover);
 router.get('/matched', protect, homepageController.getMatched);
 router.get('/netflix', homepageController.getNetflix);
 router.get('/top10', homepageController.getTop10);
+router.get('/recent',  protect, homepageController.getRecent); 
 router.get('/love', homepageController.getLove);
 router.get('/animation', homepageController.getAnimation);
 router.get('/inspiring', homepageController.getInspiring);

@@ -4,6 +4,7 @@ const API_KEY = process.env.TMDB_API_KEY;
 const Review = require('../models/Review');
 const Program = require('../models/Program');
 const { recommendByDescription } = require('../utils/recommendByDescription');
+const mongoose = require('mongoose'); 
 
 const fetchTMDB = async (endpoint) => {
   const url = `${BASE_URL}${endpoint}${endpoint.includes('?') ? '&' : '?'}api_key=${API_KEY}`;
@@ -130,5 +131,42 @@ exports.getProxyDetails = async (req, res) => {
   } catch (err) {
     console.error('TMDB Proxy Error:', err.response?.data || err.message);
     res.status(404).json({ message: 'Failed to fetch from TMDB', error: err.message });
+  }
+};
+
+exports.getRecent = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const recentPrograms = await Review.aggregate([
+      { $match: { user: new mongoose.Types.ObjectId(userId) } },
+      { $sort:  { createdAt: -1 } },
+      { $limit: 10 },
+      {
+        $lookup: {
+          from: 'programs',     
+          localField: 'program',     
+          foreignField: 'externalId',
+          as: 'prog',
+        },
+      },
+      { $unwind: '$prog' },         
+      { $replaceRoot: { newRoot: '$prog' } },
+    ]);
+
+    const formatted = recentPrograms.map((p) => ({
+      id:            p.externalId,
+      title:         p.title,
+      name:          p.title,             
+      media_type:    p.mediaType,
+      poster_path:   p.posterPath,
+      backdrop_path: p.backdropPath,
+      overview:      p.overview,
+      release_date:  p.releaseDate,
+    }));
+
+    res.json(formatted);
+  } catch (err) {
+    console.error('Recent‑reviews error:', err);
+    res.status(500).json({ message: 'Failed to load recent reviews' });
   }
 };
