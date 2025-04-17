@@ -20,13 +20,16 @@ exports.getCover = async (req, res) => {
       fetchTMDB('/discover/movie?sort_by=popularity.desc'),
       fetchTMDB('/discover/tv?sort_by=popularity.desc'),
     ]);
+    
+    // Mix top 2 from each
     const combined = [
       ...prepareResults(movies, 2, 'movie'),
       ...prepareResults(tv, 2, 'tv'),
     ];
-    const random = combined[Math.floor(Math.random() * combined.length)];
-    res.json(random);
+
+    res.json(combined); // Send array of 4
   } catch (err) {
+    console.error('Failed to fetch cover:', err);
     res.status(500).json({ error: 'Failed to fetch cover' });
   }
 };
