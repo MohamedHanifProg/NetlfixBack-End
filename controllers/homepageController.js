@@ -1,58 +1,62 @@
-const axios = require('axios');
-const BASE_URL = 'https://api.themoviedb.org/3';
-const API_KEY = process.env.TMDB_API_KEY;
-const Review = require('../models/Review');
-const Program = require('../models/Program');
-const { recommendByDescription } = require('../utils/recommendByDescription');
-const mongoose = require('mongoose'); 
+// controllers/homepageController.js
+/* eslint-disable camelcase */
+const axios    = require('axios');
+const mongoose = require('mongoose');
 
+const BASE_URL = 'https://api.themoviedb.org/3';
+const API_KEY  = process.env.TMDB_API_KEY;
+
+const Review   = require('../models/Review');
+const Program  = require('../models/Program');
+const MyList   = require('../models/MyList');
+const { recommendByDescription } = require('../utils/recommendByDescription');
+
+/* ───────── helpers ───────── */
 const fetchTMDB = async (endpoint) => {
   const url = `${BASE_URL}${endpoint}${endpoint.includes('?') ? '&' : '?'}api_key=${API_KEY}`;
-  const response = await axios.get(url);
-  return response.data.results;
+  const { data } = await axios.get(url);
+  return data.results;
 };
+const tag = (arr, mediaType, limit = null) =>
+  (limit ? arr.slice(0, limit) : arr).map((x) => ({ ...x, media_type: mediaType }));
 
-// Helper to limit and tag media type
-const prepareResults = (results, limit = null, mediaType = 'movie') => {
-  const tagged = results.map(item => ({ ...item, media_type: mediaType }));
-  return limit ? tagged.slice(0, limit) : tagged;
-};
-
-exports.getCover = async (req, res) => {
+/* ───────── handlers ───────── */
+const getCover = async (req, res) => {
   try {
     const [movies, tv] = await Promise.all([
       fetchTMDB('/discover/movie?sort_by=popularity.desc'),
       fetchTMDB('/discover/tv?sort_by=popularity.desc'),
     ]);
-    
-    // Mix top 2 from each
-    const combined = [
-      ...prepareResults(movies, 2, 'movie'),
-      ...prepareResults(tv, 2, 'tv'),
-    ];
-
-    res.json(combined); // Send array of 4
-  } catch (err) {
-    console.error('Failed to fetch cover:', err);
+    res.json([
+      ...tag(movies, 'movie', 2),
+      ...tag(tv,     'tv',    2),
+    ]);
+  } catch (e) {
+    console.error('Cover error:', e);
     res.status(500).json({ error: 'Failed to fetch cover' });
   }
 };
 
-exports.getMatched = async (req, res) => {
+const getMatched = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    // Get user's reviews
-    const userReviews = await Review.find({ user: userId });
+    /* positive reviews only */
+    const reviews = await Review.find({ user: userId, rating: { $gte: 4 } });
+    if (!reviews.length) return res.status(200).json([]);
 
-    // Extract the review texts
-    const likedOverviews = userReviews.map(r => r.text);
+    const texts   = reviews.map(r => r.text);
+    const weights = reviews.map(r => r.rating);
 
-    // Get all programs from MongoDB (not from TMDB)
-    const allPrograms = await Program.find();
+    const programs = await Program.find();
+    const ranked   = await recommendByDescription(texts, programs, weights);
 
-    // Use AI to get top 10 matches
-    const recommendations = await recommendByDescription(likedOverviews, allPrograms);
+    const seen   = new Set(reviews.map(r => r.program));
+    const unseen = ranked.filter(p => !seen.has(p.externalId));
+
+    const movies = unseen.filter(p => p.mediaType === 'movie').slice(0, 5);
+    const series = unseen.filter(p => p.mediaType === 'tv')  .slice(0, 5);
+    const recommendations = [...movies, ...series].slice(0, 10);
 
     res.status(200).json(recommendations);
   } catch (err) {
@@ -61,102 +65,95 @@ exports.getMatched = async (req, res) => {
   }
 };
 
-exports.getNetflix = async (req, res) => {
+const getNetflix = async (_req, res) => {
   const data = await fetchTMDB('/discover/tv?with_networks=213');
-  res.json(prepareResults(data, 10, 'tv'));
+  res.json(tag(data, 'tv', 10));
 };
 
-exports.getTop10 = async (req, res) => {
+const getTop10 = async (_req, res) => {
   const data = await fetchTMDB('/movie/top_rated?region=US');
-  res.json(prepareResults(data, 10));
+  res.json(tag(data, 'movie', 10));
 };
 
-exports.getLove = async (req, res) => {
+const getLove = async (_req, res) => {
   const data = await fetchTMDB('/discover/movie?sort_by=popularity.desc');
-  res.json(prepareResults(data));
+  res.json(tag(data, 'movie'));
 };
 
-exports.getAnimation = async (req, res) => {
+const getAnimation = async (_req, res) => {
   const data = await fetchTMDB('/discover/movie?with_genres=16');
-  res.json(prepareResults(data));
+  res.json(tag(data, 'movie'));
 };
 
-exports.getInspiring = async (req, res) => {
+const getInspiring = async (_req, res) => {
   const data = await fetchTMDB('/search/movie?query=inspiring');
-  res.json(prepareResults(data));
+  res.json(tag(data, 'movie'));
 };
 
-exports.getWatchlist = async (req, res) => {
+const getWatchlist = async (_req, res) => {
   const data = await fetchTMDB('/discover/movie?sort_by=popularity.desc');
-  res.json(prepareResults(data));
+  res.json(tag(data, 'movie'));
 };
 
-exports.getWeekend = async (req, res) => {
+const getWeekend = async (_req, res) => {
   const data = await fetchTMDB('/discover/movie?with_runtime.lte=90');
-  res.json(prepareResults(data));
+  res.json(tag(data, 'movie'));
 };
 
-exports.getCritics = async (req, res) => {
+const getCritics = async (_req, res) => {
   const data = await fetchTMDB('/movie/top_rated');
-  res.json(prepareResults(data));
+  res.json(tag(data, 'movie'));
 };
 
-exports.getFresh = async (req, res) => {
+const getFresh = async (_req, res) => {
   const data = await fetchTMDB('/discover/movie?sort_by=vote_average.desc');
-  res.json(prepareResults(data));
+  res.json(tag(data, 'movie'));
 };
 
-exports.getAdultAnimation = async (req, res) => {
+const getAdultAnimation = async (_req, res) => {
   const data = await fetchTMDB('/discover/tv?with_genres=16&include_adult=true');
-  res.json(prepareResults(data, null, 'tv'));
+  res.json(tag(data, 'tv'));
 };
-// Proxy request to TMDB for full movie/TV show details
-exports.getProxyDetails = async (req, res) => {
-  const axios = require('axios');
-  const API_KEY = process.env.TMDB_API_KEY;
-  const BASE_URL = 'https://api.themoviedb.org/3';
 
+const getProxyDetails = async (req, res) => {
   const { url } = req.query;
   if (!url) return res.status(400).json({ message: 'Missing URL param' });
 
   try {
-    const response = await axios.get(`${BASE_URL}${url}`, {
-      params: {
-        api_key: API_KEY,
-        append_to_response: 'credits' // Optional: get cast/crew
-      }
+    const { data } = await axios.get(`${BASE_URL}${url}`, {
+      params: { api_key: API_KEY, append_to_response: 'credits' },
     });
-
-    res.json(response.data);
+    res.json(data);
   } catch (err) {
     console.error('TMDB Proxy Error:', err.response?.data || err.message);
     res.status(404).json({ message: 'Failed to fetch from TMDB', error: err.message });
   }
 };
 
-exports.getRecent = async (req, res) => {
+const getRecent = async (req, res) => {
   try {
     const userId = req.user.id;
-    const recentPrograms = await Review.aggregate([
+
+    const recent = await Review.aggregate([
       { $match: { user: new mongoose.Types.ObjectId(userId) } },
       { $sort:  { createdAt: -1 } },
       { $limit: 10 },
       {
         $lookup: {
-          from: 'programs',     
-          localField: 'program',     
+          from: 'programs',
+          localField: 'program',
           foreignField: 'externalId',
           as: 'prog',
         },
       },
-      { $unwind: '$prog' },         
+      { $unwind: '$prog' },
       { $replaceRoot: { newRoot: '$prog' } },
     ]);
 
-    const formatted = recentPrograms.map((p) => ({
+    const formatted = recent.map(p => ({
       id:            p.externalId,
       title:         p.title,
-      name:          p.title,             
+      name:          p.title,
       media_type:    p.mediaType,
       poster_path:   p.posterPath,
       backdrop_path: p.backdropPath,
@@ -171,25 +168,20 @@ exports.getRecent = async (req, res) => {
   }
 };
 
-
-/* ───────────────────────── Top‑Rated by other users */
-exports.getPopular = async (req, res) => {
+const getPopular = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    /* 1 ▸ aggregate reviews: exclude this user, use only public reviews,
-          compute average rating and vote count per TMDB id            */
     const agg = await Review.aggregate([
       { $match: { user: { $ne: new mongoose.Types.ObjectId(userId) }, isPublic: true } },
       { $group: {
-          _id: '$program',                  // numeric TMDB id
+          _id:       '$program',
           avgRating: { $avg: '$rating' },
           votes:     { $sum: 1 },
-        } },
-      { $match: { votes: { $gte: 1 } } },   // require at least 2 votes (optional)
-      { $sort: { avgRating: -1, votes: -1 } },
+      }},
+      { $match: { votes: { $gte: 1 } } },
+      { $sort:  { avgRating: -1, votes: -1 } },
       { $limit: 10 },
-
       {
         $lookup: {
           from: 'programs',
@@ -201,7 +193,7 @@ exports.getPopular = async (req, res) => {
       { $unwind: '$prog' },
     ]);
 
-    const formatted = agg.map((x) => ({
+    const formatted = agg.map(x => ({
       id:            x.prog.externalId,
       title:         x.prog.title,
       name:          x.prog.title,
@@ -221,29 +213,23 @@ exports.getPopular = async (req, res) => {
   }
 };
 
-
-/* ───────────────────────── 10 latest items the user added to My List */
-const MyList = require('../models/MyList');   // put this near the other requires
-
-exports.getMyListRecent = async (req, res) => {
+const getMyListRecent = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    // newest first – ObjectId contains timestamp, so sorting on _id is enough
     const docs = await MyList.find({ userId })
       .sort({ _id: -1 })
       .limit(10)
       .lean();
 
-    // shape for MovieRow
-    const formatted = docs.map((d) => ({
+    const formatted = docs.map(d => ({
       id:            d.tmdb_id,
       title:         d.title,
       name:          d.title,
       media_type:    d.media_type,
       poster_path:   d.poster_path,
       backdrop_path: d.backdrop_path,
-      overview:      '',           // you could fetch TMDB here if desired
+      overview:      '',
     }));
 
     res.json(formatted);
@@ -251,4 +237,24 @@ exports.getMyListRecent = async (req, res) => {
     console.error('MyList‑recent error:', err);
     res.status(500).json({ message: 'Failed to load your list' });
   }
+};
+
+/* ───────── export everything once ───────── */
+module.exports = {
+  getCover,
+  getMatched,
+  getNetflix,
+  getTop10,
+  getLove,
+  getAnimation,
+  getInspiring,
+  getWatchlist,
+  getWeekend,
+  getCritics,
+  getFresh,
+  getAdultAnimation,
+  getProxyDetails,
+  getRecent,
+  getPopular,
+  getMyListRecent,
 };

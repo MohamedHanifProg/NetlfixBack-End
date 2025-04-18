@@ -1,57 +1,65 @@
+// utils/recommendByDescription.js
 const use = require('@tensorflow-models/universal-sentence-encoder');
-const tf = require('@tensorflow/tfjs');
+const tf  = require('@tensorflow/tfjs');
 
-
-let model;
+let model;                                       // cached instance
 
 async function loadModel() {
-  if (!model) {
-    model = await use.load();
-  }
+  if (!model) model = await use.load();          // one‑time download
   return model;
 }
 
 /**
- * Recommends programs by semantic similarity between user's review overviews and program descriptions.
- * @param {string[]} likedOverviews - Array of user review texts.
- * @param {object[]} allPrograms - Array of program objects (from MongoDB).
- * @returns {object[]} - Top 10 recommended programs with a `score` field.
+ * Recommends programs by semantic similarity between positive‑rated reviews
+ * and program descriptions.
+ *
+ * @param {string[]} likedOverviews  – review texts (4★ or 5★ only)
+ * @param {object[]} allPrograms     – Program docs from MongoDB
+ * @param {number[]} weights         – rating weights (same length as likedOverviews)
+ * @returns {object[]}               – sorted list with similarity score
  */
-async function recommendByDescription(likedOverviews, allPrograms) {
-  if (likedOverviews.length === 0 || allPrograms.length === 0) return [];
+async function recommendByDescription(likedOverviews, allPrograms, weights = []) {
+  if (!likedOverviews.length || !allPrograms.length) return [];
 
-  const model = await loadModel();
+  /* 1 ▸ embeddings */
+  const model  = await loadModel();
+  const revVec = await model.embed(likedOverviews);                 // N×512
+  const prgVec = await model.embed(allPrograms.map(p => p.overview || '')); // M×512
 
-  // Create embeddings for user reviews
-  const userEmbedding = await model.embed(likedOverviews);
+  /* 2 ▸ taste vector (weighted average) */
+  let taste;
+  if (weights.length === likedOverviews.length) {
+    const w = tf.tensor(weights);                                   // shape N
+    const weighted = revVec.mul(w.expandDims(1));                   // N×512
+    taste = tf.sum(weighted, 0).div(tf.sum(w));                     // 1×512
+    w.dispose(); weighted.dispose();
+  } else {
+    taste = tf.mean(revVec, 0);                                     // fallback
+  }
 
-  // Create embeddings for all program overviews
-  const programEmbedding = await model.embed(allPrograms.map(p => p.overview || ''));
+  /* 3 ▸ cosine‑ish similarity */
+  const sims = await tf
+    .matMul(prgVec, taste.expandDims(1))  // M×1
+    .array();                             // plain JS
 
-  // Average user embedding
-  const userAvg = tf.mean(userEmbedding, 0);
-
-  // Compute similarity scores
-  const similarities = await tf
-    .matMul(programEmbedding, userAvg.expandDims(1))
-    .array();
-
-  // Attach similarity score and map necessary frontend fields
-  const results = allPrograms.map((program, index) => {
-    const raw = program.toObject?.() || program;
+  /* 4 ▸ shape for frontend + score */
+  const results = allPrograms.map((p, i) => {
+    const raw = p.toObject?.() || p;
     return {
       ...raw,
-      id: raw.externalId,
-      media_type: raw.mediaType,
-      poster_path: raw.posterPath,
+      id:            raw.externalId,
+      media_type:    raw.mediaType,
+      poster_path:   raw.posterPath,
       backdrop_path: raw.backdropPath,
-      score: similarities[index][0],
+      score:         sims[i][0],
     };
   });
 
-  return results
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 10);
+  /* 5 ▸ cleanup GPU/CPU memory */
+  revVec.dispose(); prgVec.dispose(); taste.dispose();
+
+  /* 6 ▸ ranked top‑10 */
+  return results.sort((a, b) => b.score - a.score).slice(0, 10);
 }
 
 module.exports = { recommendByDescription };

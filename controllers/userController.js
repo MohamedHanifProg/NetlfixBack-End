@@ -18,34 +18,36 @@ const avatars = [
 const registerUser = async (req, res, next) => {
   try {
     const { name, email, phone, password } = req.body;
-    
+
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: 'Email already registered' });
     }
-    
-    // Create a new user
-    const user = await User.create({ name, email, phone, password });
-    
-    // Pick a random avatar from the array
+
+   
+    const role = req.body.adminKey === process.env.ADMIN_SECRET ? 'admin' : 'user';
+
+
+    const user = await User.create({ name, email, phone, password, role });
+
+    // Assign random avatar
     const randomAvatar = avatars[Math.floor(Math.random() * avatars.length)];
-    
-    // Create a default profile for the user (using push to add to the profiles array)
     user.profiles.push({ profileName: name, avatar: randomAvatar });
+
     await user.save();
-    
-    // Return the newly registered user (omit password in production)
+
     await Log.create({
       message: `User Created: ${user.email} (Role: ${user.role}).`,
       level: 'info',
     });
+
     res.status(201).json({ user });
-    
   } catch (error) {
     next(error);
   }
 };
+
 
 const loginUser = async (req, res, next) => {
   try {
