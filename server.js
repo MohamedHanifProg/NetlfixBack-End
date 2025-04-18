@@ -23,6 +23,8 @@ const detailsRoutes   = require('./routes/detailRoutes');
 const myListRoutes = require('./routes/myListRoutes');
 // ────────────── admin router (wraps the admin sub‑routers)
 const adminRoutes = require('./routes/adminRoutes');
+const logRoutes = require('./routes/logRoutes');
+const programRoutes = require('./routes/programRoutes');
 
 const app = express();
 
@@ -47,6 +49,8 @@ app.use('/api/mylist', myListRoutes);
 
 // ────────────── admin‑only endpoints
 // 401 → not logged‑in, 403 → not admin
+app.use('/api/logs',   logRoutes);
+app.use('/api/programs', programRoutes);  
 app.use('/api/admin', protect, admin, adminRoutes);
 
 // ────────────── global error handler
