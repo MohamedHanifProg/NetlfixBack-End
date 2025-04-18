@@ -29,23 +29,7 @@ const programRoutes = require('./routes/programRoutes');
 const app = express();
 
 // CORS
-const allowedOrigins = [
-  'http://localhost:3000',
-  'https://admirable-sable-4e8a5d.netlify.app'
-];
-
-app.use(cors({
-  origin: function (origin, callback) {
-    // allow requests with no origin (like Postman or curl)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    return callback(new Error('Not allowed by CORS'));
-  },
-  credentials: true // if you're using cookies or auth headers
-}));
-
+app.use(cors({ origin: '*' }));
 app.use(express.json());
 
 // DB
